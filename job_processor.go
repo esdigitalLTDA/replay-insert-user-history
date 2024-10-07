@@ -19,11 +19,11 @@ type JobDataRow struct {
 }
 
 func processJobs(secretName string) error {
-	fmt.Println("Processando jobs...")
+	fmt.Println("Processing jobs...")
 
 	client, err := GetBigQueryClient(secretName)
 	if err != nil {
-		log.Println("Falha ao criar cliente BigQuery: ", err)
+		log.Println("Failed to create BigQuery client: ", err)
 		return err
 	}
 	defer client.Close()
@@ -44,7 +44,7 @@ func processJobs(secretName string) error {
 
 	rows, err := query.Read(context.Background())
 	if err != nil {
-		log.Println("Falha ao executar a query: ", err)
+		log.Println("Failed to execute query: ", err)
 		return err
 	}
 
@@ -56,14 +56,14 @@ func processJobs(secretName string) error {
 		err := rows.Next(&row)
 		if errors.Is(err, iterator.Done) {
 			if count == 0 {
-				log.Println("A query retornou um conjunto vazio.")
+				log.Println("Query returned an empty set.")
 			} else {
-				log.Printf("Total de jobs lidos: %d", count)
+				log.Printf("Total jobs read: %d", count)
 			}
 			break
 		}
 		if err != nil {
-			log.Println("Falha ao ler os resultados: ", err)
+			log.Println("Failed to read results: ", err)
 			return err
 		}
 
@@ -73,17 +73,17 @@ func processJobs(secretName string) error {
 
 	userHistories, err := prepareDataForBlockchain(jobs)
 	if err != nil {
-		log.Println("Erro ao preparar dados para a blockchain:", err)
+		log.Println("Error preparing data for blockchain:", err)
 		return err
 	}
 
 	err = addToBlockchain(userHistories)
 	if err != nil {
-		log.Println("Erro ao inserir dados na blockchain:", err)
+		log.Println("Error inserting data into blockchain:", err)
 		return err
 	}
 
-	fmt.Println("Todos os jobs foram processados e inseridos na blockchain com sucesso")
+	fmt.Println("All jobs have been successfully processed and inserted into the blockchain")
 
 	return nil
 }

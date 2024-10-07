@@ -43,14 +43,14 @@ func prepareDataForBlockchain(jobs []JobDataRow) ([]UserHistory, error) {
 		userHistories = append(userHistories, userHistory)
 	}
 
-	log.Printf("Total de registros preparados para inserção na blockchain: %d", len(userHistories))
+	log.Printf("Total records prepared for insertion to blockchain: %d", len(userHistories))
 	return userHistories, nil
 }
 
 func addToBlockchain(userHistories []UserHistory) error {
 	client, err := ethclient.Dial(os.Getenv("RPC_URL"))
 	if err != nil {
-		log.Printf("Erro ao conectar ao cliente Ethereum: %v", err)
+		log.Printf("Error connecting to Ethereum client: %v", err)
 		return err
 	}
 
@@ -60,13 +60,13 @@ func addToBlockchain(userHistories []UserHistory) error {
 	}
 	privateKey, err := crypto.HexToECDSA(key)
 	if err != nil {
-		log.Printf("Erro ao converter chave privada: %v", err)
+		log.Printf("Error converting private key: %v", err)
 		return err
 	}
 
 	fromAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
 
-	// Obter o nonce inicial
+	// Obtain initial nonce
 	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
 	if err != nil {
 		return err
@@ -85,7 +85,7 @@ func addToBlockchain(userHistories []UserHistory) error {
 	contractAddress := common.HexToAddress(os.Getenv("CONTRACT_ADDRESS"))
 	parsedABI, err := abi.JSON(strings.NewReader(ABI))
 	if err != nil {
-		log.Printf("Erro ao analisar ABI: %v", err)
+		log.Printf("Error parsing ABI: %v", err)
 		return err
 	}
 
@@ -123,62 +123,38 @@ func addToBlockchain(userHistories []UserHistory) error {
 		auth.GasLimit = uint64(30000000)
 		auth.GasPrice = gasPrice
 
-		// callData, err := parsedABI.Pack("insertUserHistory", userIds, totalDurations, totalRewardsConsumers, totalRewardsContentOwners)
-		// if err != nil {
-		// 	log.Printf("Erro ao empacotar os dados da transação: %v", err)
-		// 	return err
-		// }
-
-		// gasLimit, err := client.EstimateGas(context.Background(), ethereum.CallMsg{
-		// 	From: fromAddress,
-		// 	To:   &contractAddress,
-		// 	Data: callData,
-		// })
-		// if err != nil {
-		// 	log.Printf("Erro ao estimar o limite de gás: %v", err)
-		// 	failedBatches = append(failedBatches, batch...)
-		// 	continue
-		// }
-
-		// if gasLimit > 30000000 { // Por exemplo, 30 milhões
-		// 	log.Printf("Gas estimado (%d) excede o limite permitido. Ajustando para 30.000.000.", gasLimit)
-		// 	gasLimit = 30000000
-		// }
-		// auth.GasLimit = gasLimit
-
-		// Enviar a transação
 		tx, err := contract.Transact(auth, "insertUserHistory", userIds, totalDurations, totalRewardsConsumers, totalRewardsContentOwners)
 		if err != nil {
-			log.Printf("Erro ao enviar a transação: %v", err)
+			log.Printf("Error sending transaction: %v", err)
 			failedBatches = append(failedBatches, batch...)
 			continue
 		}
 
 		if tx == nil {
-			log.Printf("Transação retornada é nula")
+			log.Printf("Returned transaction is nil")
 			failedBatches = append(failedBatches, batch...)
 			continue
 		}
 
-		// Aguardar confirmação da transação
+		// Wait for transaction confirmation
 		receipt, err := waitForConfirmation(client, tx.Hash())
 		if err != nil {
-			log.Printf("Erro ao aguardar confirmação da transação. Hash: %s, Erro: %v", tx.Hash().Hex(), err)
+			log.Printf("Error waiting for transaction confirmation. Hash: %s, Error: %v", tx.Hash().Hex(), err)
 			failedBatches = append(failedBatches, batch...)
 			continue
 		}
 
 		if receipt.Status == 1 {
-			log.Printf("Transação confirmada com sucesso! Hash: %s", tx.Hash().Hex())
+			log.Printf("Transaction successfully confirmed! Hash: %s", tx.Hash().Hex())
 		} else {
-			fmt.Printf("Transação falhou com status: %d, erro: %v", receipt.Status, err)
+			fmt.Printf("Transaction failed with status: %d, error: %v", receipt.Status, err)
 			failedBatches = append(failedBatches, batch...)
 			continue
 		}
 
-		fmt.Printf("Lote %d a %d processado com sucesso\n", i+1, end)
+		fmt.Printf("Batch %d to %d processed successfully\n", i+1, end)
 
-		// Incrementar o nonce para a próxima transação
+		// Increment nonce for next transaction
 		nonce++
 	}
 
@@ -192,7 +168,7 @@ func addToBlockchain(userHistories []UserHistory) error {
 func saveFailedBatches(failedBatches []UserHistory) {
 	file, err := os.Create("failed_batches.json")
 	if err != nil {
-		log.Printf("Erro ao criar o arquivo de lotes falhados: %v", err)
+		log.Printf("Error creating failed batches file: %v", err)
 		return
 	}
 	defer file.Close()
@@ -200,7 +176,7 @@ func saveFailedBatches(failedBatches []UserHistory) {
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(failedBatches); err != nil {
-		log.Printf("Erro ao salvar os lotes falhados no arquivo: %v", err)
+		log.Printf("Error saving failed batches to file: %v", err)
 	}
 }
 

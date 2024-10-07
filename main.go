@@ -18,6 +18,6 @@ func main() {
 
 	err = processJobs(secretName)
 	if err != nil {
-		log.Println("Erro ao processar jobs:", err)
+		log.Println("Error processing jobs:", err)
 	}
 }
